@@ -12,11 +12,13 @@ from tensorflow import keras
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import sklearn as sk
 from sklearn import preprocessing
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
+from sklearn.preprocessing import MaxAbsScaler
 
 # ----------------------------------------------------------------------
 # DATA LOADING
@@ -43,7 +45,7 @@ df_t = df.T
 df_t = df_t.iloc[2:]
 
 # Take random sample
-rs = df_t.sample(frac=0.20, replace=False, random_state=1)
+rs = df_t.sample(frac=0.35, replace=False, random_state=1)
 
 # ----------------------------------------------------------------------
 # DATA FORMATTING
@@ -76,8 +78,15 @@ gmat = gmat.to_numpy()
 # Randomize data
 np.random.shuffle(gmat)
 
-# Split into train & test data
-train, test = gmat[:2000, :], gmat[2000:, :]
+# Calculate sparsity of matrix
+sp = 1 - (np.count_nonzero(gmat) / np.size(gmat))
+
+# Generate split index
+sp_index = round(np.size(gmat, 0)*(0.75))
+
+# Split into train & test data at 80:20 ratio
+train, test = gmat[:(sp_index),
+                   :], gmat[(sp_index):, :]
 
 # One hot encode the tissue names
 encoder = LabelBinarizer()
@@ -89,58 +98,10 @@ train_data = train[:, :-1].astype(float)
 test_data = test[:, :-1].astype(float)
 
 # ----------------------------------------------------------------------
-# CHECK FOR MIN COLUMNS
+# SAVE TO FILES
 # ----------------------------------------------------------------------
-# Get 90th pct value for each column
-pcts = np.percentile(train_data, 0.9, axis=0)
-for i in range(np.size(train_data, 1)):
-    if np.percentile(train_data[:, i], 0.9) == 0:
-        train_data = np.delete(train_data, i, axis=1)
-
-# ----------------------------------------------------------------------
-# DECISION TREE
-# ----------------------------------------------------------------------
-# Create decision tree
-clf = DecisionTreeClassifier()
-
-# Train Decision Tree Classifer
-clf = clf.fit(train_data, train[:, -1])
-
-# Predict the response for test dataset
-y_pred = clf.predict(test_data)
-
-# Test
-print("Accuracy:", metrics.accuracy_score(test[:, -1], y_pred))
-
-# ----------------------------------------------------------------------
-# NORMALIZE DATA
-# ----------------------------------------------------------------------
-# Normalize the data
-train_data = preprocessing.normalize(train_data)
-test_data = preprocessing.normalize(test_data)
-
-# ----------------------------------------------------------------------
-# MODEL BUILD & TRAINING
-# ----------------------------------------------------------------------
-# Define model
-model = Sequential()
-# Define input shape
-input_shape = train_data[0].shape
-# Add layers to model
-model.add(Dense(1000, activation='tanh', input_shape=input_shape))
-model.add(LeakyReLU(alpha=0.1))
-model.add(Dense(1000, activation='relu'))
-#model.add(Dense(200, activation='sigmoid'))
-model.add(Dense(53, activation='softmax'))
-# Optimizer function
-sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-# Compile model
-model.compile(optimizer=sgd,
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
-# Try to make a model
-model.fit(train_data, train_labels, epochs=10, batch_size=32)
-
-# Evaluate the model
-score = model.evaluate(test_data, test_labels, batch_size=32)
+# Save data to csv files for loading convenience
+np.savetxt('train_data.csv', train_data, fmt='%f', delimiter=',')
+np.savetxt('test_data.csv', test_data, fmt='%f', delimiter=',')
+np.savetxt('train_labels.csv', train_labels, fmt='%f', delimiter=',')
+np.savetxt('test_labels.csv', test_labels, fmt='%f', delimiter=',')
