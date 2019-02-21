@@ -45,7 +45,7 @@ df_t = df.T
 df_t = df_t.iloc[2:]
 
 # Take random sample
-rs = df_t.sample(frac=0.5, replace=False, random_state=1)
+rs = df_t.sample(frac=0.35, replace=False, random_state=1)
 
 # ----------------------------------------------------------------------
 # DATA FORMATTING
@@ -81,9 +81,12 @@ np.random.shuffle(gmat)
 # Calculate sparsity of matrix
 sp = 1 - (np.count_nonzero(gmat) / np.size(gmat))
 
+# Generate split index
+sp_index = round(np.size(gmat, 0)*(0.75))
+
 # Split into train & test data at 80:20 ratio
-train, test = gmat[:(np.size(gmat, 0)*0.8),
-                   :], gmat[(np.size(gmat, 0)*0.8):, :]
+train, test = gmat[:(sp_index),
+                   :], gmat[(sp_index):, :]
 
 # One hot encode the tissue names
 encoder = LabelBinarizer()
