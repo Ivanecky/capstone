@@ -23,21 +23,25 @@ from sklearn.preprocessing import MaxAbsScaler
 # ----------------------------------------------------------------------
 # DATA LOADING
 # ----------------------------------------------------------------------
-# parse gct file into dataframe
-datafile = "test_data_1.gct"
+# Paths to data files
+datafile1 = "C:\\Users\\samiv\\Desktop\\senior_project\\test_data_1.gct"
+datafile2 = "C:\\Users\\samiv\\Desktop\\senior_project\\gene_data_summary.txt"
 
 # read in dataframe
-df = pd.read_csv(datafile, header=2, sep='\t')
+df = pd.read_csv(datafile1, header=2, sep='\t')
 
 # read in gene summary data
-gs = pd.read_csv("gene_data_summary.txt", sep='\t')
+gs = pd.read_csv(datafile2, sep='\t')
 
 # subset gene summmary to first and last columns
 gs = gs.iloc[:, [0, 34]]
 
 # ----------------------------------------------------------------------
-# DATA SPLITTING - TRAIN & TEST
+# DATA TRANSPOSING
 # ----------------------------------------------------------------------
+# Save column headers
+colheads = list(df.columns.values)
+
 # Transpose entire dataset
 df_t = df.T
 
@@ -45,7 +49,7 @@ df_t = df.T
 df_t = df_t.iloc[2:]
 
 # Take random sample
-rs = df_t.sample(frac=0.35, replace=False, random_state=1)
+rs = df_t.sample(frac=0.40, replace=False, random_state=1)
 
 # ----------------------------------------------------------------------
 # DATA FORMATTING
@@ -66,7 +70,6 @@ for i in range(len(tissue_ids)):
     for j in range(len(source_names)):
         if tissue_ids[i] == source_names[j]:
             names[i] = tissues[j]
-            break
 
 # Assign tissue names
 rs.iloc[:, len(rs.columns) - 1] = names
@@ -82,9 +85,9 @@ np.random.shuffle(gmat)
 sp = 1 - (np.count_nonzero(gmat) / np.size(gmat))
 
 # Generate split index
-sp_index = round(np.size(gmat, 0)*(0.75))
+sp_index = round(np.size(gmat, 0)*(0.7))
 
-# Split into train & test data at 80:20 ratio
+# Split into train & test data
 train, test = gmat[:(sp_index),
                    :], gmat[(sp_index):, :]
 
