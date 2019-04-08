@@ -51,14 +51,14 @@ train_data = scaler.fit_transform(train_data)
 # Scale testing data
 test_data = scaler.fit_transform(test_data)
 
-# Normalize the data - use l1 for sparsity
+# Normalize the data - use l2 for sparsity
 train_data = preprocessing.normalize(train_data, norm='l2')
 test_data = preprocessing.normalize(test_data, norm='l2')
 
 # ----------------------------------------------------------------------
 # PRINCIPAL COMPONENT ANALYSIS
 # ----------------------------------------------------------------------
-# Model instance of only PCA with 90% variance explained
+# Model instance of only PCA with 70% variance explained
 pca = PCA(.70)
 
 # Fit PCA on training data
@@ -81,8 +81,7 @@ earlyStop = keras.callbacks.EarlyStopping(
 # Define input shape
 input_shape = train_data_pca[0].shape
 # Add layers to model
-model.add(Dense(125, activation='relu', input_shape=input_shape))
-model.add(Dense(75, activation='tanh'))
+model.add(Dense(100, activation='tanh', input_shape=input_shape))
 model.add(Dense(53, activation='softmax'))
 # Compile model
 model.compile(optimizer='adam',
@@ -113,7 +112,7 @@ model = Sequential()
 # Define input shape
 input_shape = train_data[0].shape
 # Add layers to model
-model.add(Dense(500, activation='tanh', input_shape=input_shape))
+model.add(Dense(100, activation='sigmoid', input_shape=input_shape))
 model.add(Dense(53, activation='softmax'))
 # Compile model
 model.compile(optimizer='adam',
@@ -121,12 +120,14 @@ model.compile(optimizer='adam',
               metrics=[keras.metrics.categorical_accuracy, 'accuracy'])
 
 # Configure tensorboard
-# tbCallBack = keras.callbacks.TensorBoard(
-#   log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
+tbCallBack = keras.callbacks.TensorBoard(
+    log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
 
 # Fit model with tensorboard callback
 model.fit(train_data, train_labels, epochs=50,
-          batch_size=64, verbose=1, validation_split=0.3)
+          batch_size=32, verbose=1, validation_split=0.3,
+          callbacks=[earlyStop, tbCallBack])
+
 
 # Model evaluation
 score = model.evaluate(test_data, test_labels, batch_size=64, verbose=1)
@@ -141,60 +142,24 @@ predictions = model.predict_classes(test_data, batch_size=32)
 # Generate confusion matrix
 matrix = metrics.confusion_matrix(test_labels.argmax(axis=1), predictions)
 
-# Plot matrix
-pylab.ion()
-
 # Create heatmap using seaborn
-hmap1 = sn.heatmap(matrix, annot=True, square=True)
-hmap1.figure.set_size_inches(22.5, 14.5)
-hmap1.figure.savefig('hmap1.png')
+plt.clf()
+plt.figure()
+hmap1 = sn.heatmap(matrix, annot=True, square=True,
+                   xticklabels=True, yticklabels=True)
+hmap1.figure.set_size_inches(24.5, 18.5)
+hmap1.figure.savefig('hmap_sigmoid.png')
 
 # Second heatmap using matplotlib
+plt.clf()
+plt.figure()
 hmap2 = plt.imshow(matrix, cmap='hot')
 hmap2.figure.set_size_inches(18.5, 10.5)
 hmap2.figure.savefig('hmap2.png')
 
-# ----------------------------------------------------------------------
-# MODEL TESTING
-# ----------------------------------------------------------------------
-# Assign initial value for i
-i = 50
-# Vector to hold accuracy
-test_acc = []
-
-# Loop through and test
-while i < 500:
-    # Define model
-    model = Sequential()
-    # Setup early stopping
-    earlyStop = keras.callbacks.EarlyStopping(
-        monitor='val_categorical_accuracy', patience=3, verbose=1)
-    # Define input shape
-    input_shape = train_data_pca[0].shape
-    # Add layers to model
-    model.add(Dense(650, activation='relu', input_shape=input_shape))
-    model.add(Dropout(0.5))
-    model.add(Dense(i, activation='relu'))
-    model.add(Dense(53, activation='softmax'))
-    # Compile model
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=[keras.metrics.categorical_accuracy])
-
-    # Configure tensorboard
-    # tbCallBack = keras.callbacks.TensorBoard(
-    #   log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
-
-    # Fit model with tensorboard callback
-    model.fit(train_data_pca, train_labels, epochs=25,
-              batch_size=32, verbose=1, validation_split=0.25,
-              callbacks=[earlyStop])
-
-    # Model evaluation
-    score = model.evaluate(test_data_pca, test_labels,
-                           batch_size=32, verbose=1)
-
-    # Add accuracy to vector
-    test_acc.append(score[1])
-
-    i = i + 50
+# Third heatmap with no annotations
+plt.clf()
+plt.figure()
+hmap3 = sn.heatmap(matrix)
+hmap3.figure.set_size_inches(24.5, 18.5)
+hmap3.figure.savefig('hmap3.png')

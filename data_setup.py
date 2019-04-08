@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sklearn as sk
 from sklearn import preprocessing
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.tree import DecisionTreeClassifier
 from sklearn import metrics
@@ -49,7 +49,7 @@ df_t = df.T
 df_t = df_t.iloc[2:]
 
 # Take random sample
-rs = df_t.sample(frac=0.40, replace=False, random_state=1)
+rs = df_t.sample(frac=0.5, replace=False, random_state=3)
 
 # ----------------------------------------------------------------------
 # DATA FORMATTING
@@ -70,9 +70,11 @@ for i in range(len(tissue_ids)):
     for j in range(len(source_names)):
         if tissue_ids[i] == source_names[j]:
             names[i] = tissues[j]
+            break
 
 # Assign tissue names
 rs.iloc[:, len(rs.columns) - 1] = names
+rs = rs[rs.tissue != '']
 
 # Convert data to array format
 gmat = rs.iloc[:, 0:(len(rs.columns))]
@@ -87,24 +89,37 @@ sp = 1 - (np.count_nonzero(gmat) / np.size(gmat))
 # Generate split index
 sp_index = round(np.size(gmat, 0)*(0.7))
 
-# Split into train & test data
-train, test = gmat[:(sp_index),
-                   :], gmat[(sp_index):, :]
+# TEST
+gmat = pd.DataFrame(gmat)
+
+y = gmat.iloc[:, 56202]
+
+gmat = gmat.iloc[:, :56201]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    gmat, y, test_size=0.3, random_state=42, stratify=y)
+                   
+# create vectors to hold variables
+x_train = np.array(X_train.iloc[:, :56201])
+x_test = np.array(X_test.iloc[:, :56201])
+
+y_train = np.array(y_train)
+y_test = np.array(y_test)
 
 # One hot encode the tissue names
 encoder = LabelBinarizer()
-train_labels = encoder.fit_transform(train[:, -1])
-test_labels = encoder.fit_transform(test[:, -1])
+y_train = encoder.fit_transform(y_train)
+y_test = encoder.fit_transform(y_test)
 
 # Convert array from objects to floats
-train_data = train[:, :-1].astype(float)
-test_data = test[:, :-1].astype(float)
+x_train = x_train.astype(float)
+x_test = x_test.astype(float)
 
 # ----------------------------------------------------------------------
 # SAVE TO FILES
 # ----------------------------------------------------------------------
 # Save data to csv files for loading convenience
-np.savetxt('train_data.csv', train_data, fmt='%f', delimiter=',')
-np.savetxt('test_data.csv', test_data, fmt='%f', delimiter=',')
-np.savetxt('train_labels.csv', train_labels, fmt='%f', delimiter=',')
-np.savetxt('test_labels.csv', test_labels, fmt='%f', delimiter=',')
+np.savetxt('train_data.csv', x_train, fmt='%f', delimiter=',')
+np.savetxt('test_data.csv', x_test, fmt='%f', delimiter=',')
+np.savetxt('train_labels.csv', y_train, fmt='%f', delimiter=',')
+np.savetxt('test_labels.csv', y_test, fmt='%f', delimiter=',')
